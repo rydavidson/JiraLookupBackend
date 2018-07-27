@@ -27,13 +27,12 @@ var jwtArray = [];
 
 router.use("/search/:id", function (req, res, next) {
 
-    if (process.env.NODE_ENV.indexOf("dev") !== -1) {
-        console.log("Running in dev move, authentication bypassed for " + req.connection.remoteAddress);
-        next();
-    } else {
+    // if (process.env.NODE_ENV.indexOf("dev") !== -1) {
+    //     console.log("Running in dev move, authentication bypassed for " + req.connection.remoteAddress);
+    //     next();
+    // } else {
         if (jwtArray.length === 0) {
             res.sendStatus(403);
-
         } else if (!req.get("Authorization")) {
             res.sendStatus(403);
         } else {
@@ -47,7 +46,7 @@ router.use("/search/:id", function (req, res, next) {
                 res.sendStatus(401);
             }
         }
-    }
+    //}
 
 })
 
