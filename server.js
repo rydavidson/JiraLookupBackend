@@ -27,10 +27,28 @@ var jwtArray = [];
 
 router.use("/search/:id", function (req, res, next) {
 
-    // if (process.env.NODE_ENV.indexOf("dev") !== -1) {
-    //     console.log("Running in dev move, authentication bypassed for " + req.connection.remoteAddress);
-    //     next();
-    // } else {
+
+    if (req.method === 'OPTIONS') {
+        console.log('OPTIONS request');
+        var headers = {};
+        // IE8 does not allow domains to be specified, just the *
+        // headers["Access-Control-Allow-Origin"] = req.headers.origin;
+        headers["Access-Control-Allow-Origin"] = "*";
+        headers["Access-Control-Allow-Methods"] = "POST, GET, PUT, DELETE, OPTIONS";
+        headers["Access-Control-Allow-Credentials"] = false;
+        headers["Access-Control-Max-Age"] = '86400'; // 24 hours
+        headers["Access-Control-Allow-Headers"] = "X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept, Authorization";
+        res.writeHead(200, headers);
+        res.end();
+    }
+    else {
+        res.set("Access-Control-Allow-Origin", req.get("Origin"));
+        res.set("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS");
+        res.set("Access-Control-Allow-Credentials", false);
+        // if (process.env.NODE_ENV.indexOf("dev") !== -1) {
+        //     console.log("Running in dev move, authentication bypassed for " + req.connection.remoteAddress);
+        //     next();
+        // } else {
         if (jwtArray.length === 0) {
             res.sendStatus(403);
         } else if (!req.get("Authorization")) {
@@ -46,7 +64,8 @@ router.use("/search/:id", function (req, res, next) {
                 res.sendStatus(401);
             }
         }
-    //}
+        //}
+    }
 
 })
 
@@ -92,38 +111,38 @@ router.post('/auth', function (req, res) {
 
 router.get('/search/:id', function (req, res) {
 
-    var sfid = req.params.id;
+    var sfid = req.params.id.trim().toLowerCase();
+
 
     if (sfid === undefined) {
         res.sendStatus(400);
     }
 
-    var reg1 = /[a-zA-Z0-9][a-zA-Z0-9][a-zA-Z0-9][a-zA-Z0-9][a-zA-Z0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]/gmi
-    var reg2 = /[0-9][0-9][0-9][0-9][0-9][0-9]/gmi
+    var reg1 = /[a-z0-9][a-z0-9][a-z0-9][a-z0-9][a-z0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]/gm
+    // var reg2 = /[0-9][0-9][0-9][0-9][0-9][0-9]/gm
 
-    var m
+    console.log(sfid);
 
     if (sfid.length > 0) {
 
-        if (reg1.exec(sfid) != null) {
+        var m = reg1.exec(sfid);
+        if(m !== null) {
             jira.getItemByCaseId(sfid, function (err, result) {
                 if (isErr(err)) {
                     handleErr(err, res);
                 } else if (err == constants.emptyResponse) {
                     res.status(err.httpCode).json(err.message);
                 } else {
-                    res.status(200).json(result);
+                    res.status(203).json(result);
                 }
             });
-        } else if (reg2.exec(sfid) != null) {
-            res.sendStatus(200);
         } else {
             res.sendStatus(400);
         }
+        // res.sendStatus(200);
     } else {
         res.sendStatus(400);
     }
-
 });
 
 function isErr(err) {
