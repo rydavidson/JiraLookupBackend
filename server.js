@@ -146,37 +146,39 @@ router.get('/search/case/:id', function (req, res) {
 
 router.get('/search/account/:id', function (req, res) {
 
-    var sfid = req.params.id.trim().toLowerCase();
+    res.sendStatus(501);
 
-    if (sfid === undefined) {
-        res.sendStatus(400);
-    }
-
-    var reg1 = /[a-z0-9][a-z0-9][a-z0-9][a-z0-9][a-z0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]/gm
-    // var reg2 = /[0-9][0-9][0-9][0-9][0-9][0-9]/gm
-
-    console.log(sfid);
-
-    if (sfid.length > 0) {
-
-        var m = reg1.exec(sfid);
-        if(m !== null) {
-            jira.getItemByCaseId(sfid, function (err, result) {
-                if (isErr(err)) {
-                    handleErr(err, res);
-                } else if (err == constants.emptyResponse) {
-                    res.status(err.httpCode).json(err.message);
-                } else {
-                    res.status(203).json(result);
-                }
-            });
-        } else {
-            res.sendStatus(400);
-        }
-        // res.sendStatus(200);
-    } else {
-        res.sendStatus(400);
-    }
+    // var sfid = req.params.id.trim().toLowerCase();
+    //
+    // if (sfid === undefined) {
+    //     res.sendStatus(400);
+    // }
+    //
+    // var reg1 = /[a-z0-9][a-z0-9][a-z0-9][a-z0-9][a-z0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]/gm
+    // // var reg2 = /[0-9][0-9][0-9][0-9][0-9][0-9]/gm
+    //
+    // console.log(sfid);
+    //
+    // if (sfid.length > 0) {
+    //
+    //     var m = reg1.exec(sfid);
+    //     if(m !== null) {
+    //         jira.getItemByCaseId(sfid, function (err, result) {
+    //             if (isErr(err)) {
+    //                 handleErr(err, res);
+    //             } else if (err == constants.emptyResponse) {
+    //                 res.status(err.httpCode).json(err.message);
+    //             } else {
+    //                 res.status(203).json(result);
+    //             }
+    //         });
+    //     } else {
+    //         res.sendStatus(400);
+    //     }
+    //     // res.sendStatus(200);
+    // } else {
+    //     res.sendStatus(400);
+    // }
 });
 
 // This is a legacy route, do not update it!
