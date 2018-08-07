@@ -1,40 +1,41 @@
 // modules
 
 require('dotenv').config();
-var express = require("express");
-var bodyParser = require('body-parser');
+const express = require("express");
+const bodyParser = require('body-parser');
+const fs = require('fs');
+const constants = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 
 // my libs
 
-var auth = require('./lib/auth.js');
-var jira = require('./lib/jiraclient.js');
-const constants = require('./lib/constants');
+const auth = require('./lib/auth.js');
+const jira = require('./lib/jiraclient.js');
+// const constants = require('./lib/constants');
 
 // express config
 
-var app = express();
-var port = process.env.PORT || 3001;
+const app = express();
+const port = process.env.PORT || 3001;
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
-var router = new express.Router();
+const router = new express.Router();
 app.use(router);
 
 // other vars
 
-var jwtArray = [];
+let jwtArray = [];
 
 // middleware
 
-router.use("/search/:id", function (req, res, next) {
-
+router.use("/search", function (req, res, next) {
 
     if (req.method === 'OPTIONS') {
-        console.log('OPTIONS request');
-        var headers = {};
+        // console.log('OPTIONS request');
+        let headers = {};
         // IE8 does not allow domains to be specified, just the *
         // headers["Access-Control-Allow-Origin"] = req.headers.origin;
         headers["Access-Control-Allow-Origin"] = "*";
-        headers["Access-Control-Allow-Methods"] = "POST, GET, PUT, DELETE, OPTIONS";
+        headers["Access-Control-Allow-Methods"] = "GET, OPTIONS";
         headers["Access-Control-Allow-Credentials"] = false;
         headers["Access-Control-Max-Age"] = '86400'; // 24 hours
         headers["Access-Control-Allow-Headers"] = "X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept, Authorization";
@@ -43,19 +44,15 @@ router.use("/search/:id", function (req, res, next) {
     }
     else {
         res.set("Access-Control-Allow-Origin", req.get("Origin"));
-        res.set("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS");
+        res.set("Access-Control-Allow-Methods", "GET, OPTIONS");
         res.set("Access-Control-Allow-Credentials", false);
-        // if (process.env.NODE_ENV.indexOf("dev") !== -1) {
-        //     console.log("Running in dev move, authentication bypassed for " + req.connection.remoteAddress);
-        //     next();
-        // } else {
         if (jwtArray.length === 0) {
             res.sendStatus(403);
         } else if (!req.get("Authorization")) {
             res.sendStatus(403);
         } else {
-            var token = req.get("Authorization");
-            var authenticated = function (e) {
+            let token = req.get("Authorization");
+            let authenticated = function (e) {
                 return e.ip === req.connection.remoteAddress && e.token === token;
             }
             if (jwtArray.some(authenticated)) {
@@ -64,7 +61,6 @@ router.use("/search/:id", function (req, res, next) {
                 res.sendStatus(401);
             }
         }
-        //}
     }
 
 })
@@ -73,12 +69,13 @@ router.use("/search/:id", function (req, res, next) {
 
 router.post('/auth', function (req, res) {
 
-    var username = req.body.username;
-    var hashedPassword = req.body.password;
+    let username = req.body.username;
+    let hashedPassword = req.body.password;
 
     console.debug(req.body);
 
     res.set("Access-Control-Allow-Origin", req.get("Origin"));
+
     try {
         auth.authenticateUser(username, hashedPassword, function (jwt) {
 
@@ -111,74 +108,65 @@ router.post('/auth', function (req, res) {
 
 router.get('/search/case/:id', function (req, res) {
 
-    var sfid = req.params.id.trim().toLowerCase();
+    let searchKey = req.params.id.trim().toLowerCase();
 
-    if (sfid === undefined) {
+    if (searchKey === undefined) {
         res.sendStatus(400);
     }
 
-    var reg1 = /[a-z0-9][a-z0-9][a-z0-9][a-z0-9][a-z0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]/gm
-    // var reg2 = /[0-9][0-9][0-9][0-9][0-9][0-9]/gm
+    let reg1 = /[a-z0-9][a-z0-9][a-z0-9][a-z0-9][a-z0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]/gm
 
-    console.log(sfid);
+    if (searchKey.length > 0) {
 
-    if (sfid.length > 0) {
-
-        var m = reg1.exec(sfid);
+        let m = reg1.exec(searchKey);
         if(m !== null) {
-            jira.getItemByCaseId(sfid, function (err, result) {
+            jira.getJiraItem(constants.sfSearchType.searchType, searchKey, function (err, result) {
                 if (isErr(err)) {
                     handleErr(err, res);
-                } else if (err == constants.emptyResponse) {
+                } else if (err === constants.emptyResponse) {
                     res.status(err.httpCode).json(err.message);
                 } else {
                     res.status(203).json(result);
                 }
             });
         } else {
+            console.error("Bad request: " + searchKey);
             res.sendStatus(400);
         }
-        // res.sendStatus(200);
     } else {
         res.sendStatus(400);
     }
 });
 
-router.get('/search/account/:id', function (req, res) {
+router.get('/search/jira/:id', function (req, res) {
 
-    res.sendStatus(501);
+    let searchKey = req.params.id.trim().toLowerCase();
 
-    // var sfid = req.params.id.trim().toLowerCase();
-    //
-    // if (sfid === undefined) {
-    //     res.sendStatus(400);
-    // }
-    //
-    // var reg1 = /[a-z0-9][a-z0-9][a-z0-9][a-z0-9][a-z0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]/gm
-    // // var reg2 = /[0-9][0-9][0-9][0-9][0-9][0-9]/gm
-    //
-    // console.log(sfid);
-    //
-    // if (sfid.length > 0) {
-    //
-    //     var m = reg1.exec(sfid);
-    //     if(m !== null) {
-    //         jira.getItemByCaseId(sfid, function (err, result) {
-    //             if (isErr(err)) {
-    //                 handleErr(err, res);
-    //             } else if (err == constants.emptyResponse) {
-    //                 res.status(err.httpCode).json(err.message);
-    //             } else {
-    //                 res.status(203).json(result);
-    //             }
-    //         });
-    //     } else {
-    //         res.sendStatus(400);
-    //     }
-    //     // res.sendStatus(200);
-    // } else {
-    //     res.sendStatus(400);
-    // }
+    if (searchKey === undefined) {
+        res.sendStatus(400);
+    }
+
+    if (searchKey.length > 0) {
+        let reg1 = /(.*[a-z])-(.*[0-9])/gm
+
+        let m = reg1.exec(searchKey);
+        if(m !== null) {
+            jira.getJiraItem(constants.jiraSearchType.searchType, searchKey, function (err, result) {
+                if (isErr(err)) {
+                    handleErr(err, res);
+                } else if (err === constants.emptyResponse) {
+                    res.status(err.httpCode).json(err.message);
+                } else {
+                    res.status(203).json(result);
+                }
+            });
+        } else{
+            console.error("Bad request: " + searchKey);
+            res.sendStatus(400);
+        }
+    } else {
+        res.sendStatus(400);
+    }
 });
 
 // This is a legacy route, do not update it!
@@ -255,10 +243,8 @@ function handleErr(err, res) {
 }
 
 app.listen(port);
+console.log("Server listening");
 
-console.log("Running at Port " + port);
-console.log("Dumping environment variables");
-console.log("process.env.NODE_ENV: " + process.env.NODE_ENV);
-console.log("process.env.ACCELAUSER: " + process.env.ACCELAUSER);
-console.log("process.env.PASSWORD: " + process.env.PASSWORD);
-console.log("process.env.SECRET: " + process.env.SECRET);
+// for (var key in constants) {
+//    console.log(key + " : " + JSON.stringify(constants[key]));
+// }
